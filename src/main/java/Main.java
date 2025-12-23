@@ -2,8 +2,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class Main {
+
+    private static final ConcurrentHashMap<String, ValueHolder> storage = new ConcurrentHashMap<>();
     public static void main(String[] args) {
         int port = 6379;
 
@@ -47,18 +50,50 @@ public class Main {
                     clientSocket.getOutputStream().write("+PONG\r\n".getBytes());
                 }
                 else if (command.equals("ECHO")) {
-                    StringBuilder fullMessage = new StringBuilder();
+                    // If there are multiple arguments (like ECHO hello world),
+                    // we can join them or just take the first one as per Redis spec.
+                    // Let's take the first argument (index 4)
+                    String argument = parts[4];
 
-                    // Start at index 4 (the first argument)
-                    // Skip by 2 because every piece of data has a '$' length header before it
-                    for (int i = 4; i < parts.length; i += 2) {
-                        fullMessage.append(parts[i]);
-                        if (i + 2 < parts.length) fullMessage.append(" "); // Add space between words
+                    // Construct the Bulk String response
+                    StringBuilder response = new StringBuilder();
+                    response.append("$").append(argument.length()).append("\r\n");
+                    response.append(argument).append("\r\n");
+
+                    clientSocket.getOutputStream().write(response.toString().getBytes());
+                }
+                else if (command.equals("SET")) {
+                    String key = parts[4];
+                    String value = parts[6];
+                    Long expiry = null;
+
+                    if (parts.length > 8) {
+                        String option = parts[8].toUpperCase(); // Could be "EX" or "PX"
+                        long duration = Long.parseLong(parts[10]);
+
+                        if (option.equals("EX")) {
+                            // Seconds to Milliseconds
+                            expiry = System.currentTimeMillis() + (duration * 1000);
+                        } else if (option.equals("PX")) {
+                            // Already Milliseconds
+                            expiry = System.currentTimeMillis() + duration;
+                        }
                     }
 
-                    String result = fullMessage.toString();
-                    String response = "$" + result.length() + "\r\n" + result + "\r\n";
-                    clientSocket.getOutputStream().write(response.getBytes());
+                    storage.put(key, new ValueHolder(value, expiry));
+                    clientSocket.getOutputStream().write("+OK\r\n".getBytes());
+                }
+                else if (command.equals("GET")) {
+                    String key = parts[4];
+                    ValueHolder holder = storage.get(key);
+
+                    if (holder == null || holder.isExpired()) {
+                        if (holder != null) storage.remove(key); // Cleanup expired key
+                        clientSocket.getOutputStream().write("$-1\r\n".getBytes());
+                    } else {
+                        String response = "$" + holder.value.length() + "\r\n" + holder.value + "\r\n";
+                        clientSocket.getOutputStream().write(response.getBytes());
+                    }
                 }
             }
         } catch (IOException e) {
