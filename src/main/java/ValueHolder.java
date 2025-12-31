@@ -1,15 +1,13 @@
 class ValueHolder {
-    String value;
-    Long expiryTime; // Store the absolute millisecond when this should die
+    Object value; // Changed to Object to hold String OR List
+    Long expiryTime;
 
-    ValueHolder(String value, Long expiryTime) {
+    ValueHolder(Object value, Long expiryTime) { // Changed parameter to Object
         this.value = value;
         this.expiryTime = expiryTime;
     }
 
     boolean isExpired() {
-        // If expiryTime is null, it lives forever. 
-        // Otherwise, check if current time is past the death time.
         return expiryTime != null && System.currentTimeMillis() > expiryTime;
     }
 }

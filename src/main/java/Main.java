@@ -2,6 +2,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Main {
@@ -91,9 +93,38 @@ public class Main {
                         if (holder != null) storage.remove(key); // Cleanup expired key
                         clientSocket.getOutputStream().write("$-1\r\n".getBytes());
                     } else {
-                        String response = "$" + holder.value.length() + "\r\n" + holder.value + "\r\n";
-                        clientSocket.getOutputStream().write(response.getBytes());
+                        if(holder.value instanceof String)
+                        {
+                            String val= (String) holder.value;
+                            String response = "$" + val.length() + "\r\n" + holder.value + "\r\n";
+                            clientSocket.getOutputStream().write(response.getBytes());
+                        }
+                        else
+                        {
+                            clientSocket.getOutputStream().write("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n".getBytes());
+                        }
                     }
+                }
+                else if (command.equals("RPUSH")) {
+                    String key = parts[4];
+
+                    ValueHolder holder = storage.get(key);
+                    List<String> list;
+
+                    if (holder == null || holder.isExpired()) {
+                        list = new ArrayList<>();
+                        storage.put(key, new ValueHolder(list, null));
+                    } else {
+                        list = (List<String>) holder.value;
+                    }
+
+
+                    for (int i = 6; i < parts.length; i += 2) {
+                        list.add(parts[i]);
+                    }
+
+                    String response = ":" + list.size() + "\r\n";
+                    clientSocket.getOutputStream().write(response.getBytes());
                 }
             }
         } catch (IOException e) {
