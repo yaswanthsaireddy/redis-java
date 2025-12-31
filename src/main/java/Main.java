@@ -126,6 +126,48 @@ public class Main {
                     String response = ":" + list.size() + "\r\n";
                     clientSocket.getOutputStream().write(response.getBytes());
                 }
+                else if (command.equals("LRANGE")) {
+                    String key = parts[4];
+                    int start = Integer.parseInt(parts[6]);
+                    int stop = Integer.parseInt(parts[8]);
+
+                    ValueHolder holder = storage.get(key);
+
+                    if (holder == null || !(holder.value instanceof List)) {
+                        clientSocket.getOutputStream().write("*0\r\n".getBytes());
+                    }
+                    else if (!(holder.value instanceof List<?>))
+                    {
+                        clientSocket.getOutputStream().write("-The key's type is not of list\r\n".getBytes());
+                    }
+                    else {
+                        List<String> list = (List<String>) holder.value;
+                        int size = list.size();
+
+
+                        if (start < 0) start = size + start;
+                        if (stop < 0) stop = size + stop;
+
+
+                        start = Math.max(0, start);
+                        stop = Math.min(size - 1, stop);
+
+                        if (start > stop || start >= size) {
+                            clientSocket.getOutputStream().write("*0\r\n".getBytes());
+                        } else {
+                            int count = stop - start + 1;
+                            StringBuilder response = new StringBuilder();
+                            response.append("*").append(count).append("\r\n");
+
+                            for (int i = start; i <= stop; i++) {
+                                String item = list.get(i);
+                                response.append("$").append(item.length()).append("\r\n");
+                                response.append(item).append("\r\n");
+                            }
+                            clientSocket.getOutputStream().write(response.toString().getBytes());
+                        }
+                    }
+                }
             }
         } catch (IOException e) {
             System.out.println("Client handler error: " + e.getMessage());
