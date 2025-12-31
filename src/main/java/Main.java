@@ -3,6 +3,7 @@ import java.io.InputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -112,7 +113,7 @@ public class Main {
                     List<String> list;
 
                     if (holder == null || holder.isExpired()) {
-                        list = new ArrayList<>();
+                        list = new LinkedList<>();
                         storage.put(key, new ValueHolder(list, null));
                     } else {
                         list = (List<String>) holder.value;
@@ -121,6 +122,28 @@ public class Main {
 
                     for (int i = 6; i < parts.length; i += 2) {
                         list.add(parts[i]);
+                    }
+
+                    String response = ":" + list.size() + "\r\n";
+                    clientSocket.getOutputStream().write(response.getBytes());
+                }
+                else if (command.equals("LPUSH")) {
+                    String key = parts[4];
+
+                    ValueHolder holder = storage.get(key);
+                    List<String> list;
+
+                    if (holder == null || holder.isExpired()) {
+                        list = new LinkedList<>();
+                        storage.put(key, new ValueHolder(list, null));
+                    } else {
+                        list = (List<String>) holder.value;
+                    }
+
+                    int count=0;
+                    for (int i = 6; i < parts.length; i += 2) {
+                        list.add(0,parts[i]);
+                        count++;
                     }
 
                     String response = ":" + list.size() + "\r\n";
