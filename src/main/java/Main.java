@@ -191,6 +191,26 @@ public class Main {
                         }
                     }
                 }
+                else if (command.equals("LLEN"))
+                {
+                    String key= parts[4];
+
+                    ValueHolder holder= storage.get(key);
+
+                    if (holder == null || !(holder.value instanceof List)) {
+                        clientSocket.getOutputStream().write(":0\r\n".getBytes());
+                    }
+                    else if (!(holder.value instanceof List<?>))
+                    {
+                        clientSocket.getOutputStream().write("-The key's type is not of list\r\n".getBytes());
+                    }
+                    else
+                    {
+                        List<String> list = (List<String>) holder.value;
+                        String response=":"+list.size()+"\r\n";
+                        clientSocket.getOutputStream().write(response.getBytes());
+                    }
+                }
             }
         } catch (IOException e) {
             System.out.println("Client handler error: " + e.getMessage());
