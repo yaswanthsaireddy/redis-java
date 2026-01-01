@@ -108,7 +108,6 @@ public class Main {
                 }
                 else if (command.equals("RPUSH")) {
                     String key = parts[4];
-
                     ValueHolder holder = storage.get(key);
                     List<String> list;
 
@@ -129,7 +128,6 @@ public class Main {
                 }
                 else if (command.equals("LPUSH")) {
                     String key = parts[4];
-
                     ValueHolder holder = storage.get(key);
                     List<String> list;
 
@@ -193,8 +191,7 @@ public class Main {
                 }
                 else if (command.equals("LLEN"))
                 {
-                    String key= parts[4];
-
+                    String key = parts[4];
                     ValueHolder holder= storage.get(key);
 
                     if (holder == null || !(holder.value instanceof List)) {
@@ -210,6 +207,33 @@ public class Main {
                         String response=":"+list.size()+"\r\n";
                         clientSocket.getOutputStream().write(response.getBytes());
                     }
+                }
+                else if (command.equals("LPOP"))
+                {
+                    String key = parts[4];
+                    ValueHolder holder = storage.get(key);
+
+                    if (holder == null || !(holder.value instanceof List)) {
+                        clientSocket.getOutputStream().write("$-1\r\n".getBytes());
+                    }
+                    else if (!(holder.value instanceof List<?>))
+                    {
+                        //clientSocket.getOutputStream().write("-The key's type is not of list\r\n".getBytes());
+                        clientSocket.getOutputStream().write("$-1\r\n".getBytes());
+                    }
+                    else
+                    {
+                        List<String> list = (List<String>) holder.value;
+                        String popElement= list.get(0);
+                        list.remove(0);
+                        String response= "$"+popElement.length()+"\r\n"+popElement+"\r\n";
+                        clientSocket.getOutputStream().write(response.getBytes());
+                    }
+
+                }
+                else
+                {
+
                 }
             }
         } catch (IOException e) {
