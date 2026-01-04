@@ -208,28 +208,43 @@ public class Main {
                         clientSocket.getOutputStream().write(response.getBytes());
                     }
                 }
-                else if (command.equals("LPOP"))
-                {
+                else if (command.equals("LPOP")) {
                     String key = parts[4];
+
+                    boolean hasCount = (parts.length > 5);
+                    int countToPop = 1;
+
+                    if (hasCount) {
+                        countToPop = Integer.parseInt(parts[6]);
+                    }
+
                     ValueHolder holder = storage.get(key);
 
-                    if (holder == null || !(holder.value instanceof List)) {
+                    if (holder == null || !(holder.value instanceof List) || ((List<?>)holder.value).isEmpty()) {
                         clientSocket.getOutputStream().write("$-1\r\n".getBytes());
-                    }
-                    else if (!(holder.value instanceof List<?>))
-                    {
-                        //clientSocket.getOutputStream().write("-The key's type is not of list\r\n".getBytes());
-                        clientSocket.getOutputStream().write("$-1\r\n".getBytes());
-                    }
-                    else
-                    {
+                    } else {
                         List<String> list = (List<String>) holder.value;
-                        String popElement= list.get(0);
-                        list.remove(0);
-                        String response= "$"+popElement.length()+"\r\n"+popElement+"\r\n";
-                        clientSocket.getOutputStream().write(response.getBytes());
-                    }
 
+                        countToPop = Math.min(countToPop, list.size());
+
+                        if (!hasCount) {
+
+                            String element = list.remove(0);
+                            String response = "$" + element.length() + "\r\n" + element + "\r\n";
+                            clientSocket.getOutputStream().write(response.getBytes());
+                        } else {
+
+                            StringBuilder response = new StringBuilder();
+                            response.append("*").append(countToPop).append("\r\n");
+
+                            for (int i = 0; i < countToPop; i++) {
+                                String element = list.remove(0);
+                                response.append("$").append(element.length()).append("\r\n");
+                                response.append(element).append("\r\n");
+                            }
+                            clientSocket.getOutputStream().write(response.toString().getBytes());
+                        }
+                    }
                 }
                 else
                 {
